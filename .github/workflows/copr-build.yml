@@ -78,9 +78,17 @@ jobs:
         if: env.UPDATE_NEEDED == 'true' || (github.event_name == 'workflow_dispatch' && github.event.inputs.force_rebuild == 'true')  
         id: copr_build  
         run: |  
-          BUILD_ID=$(copr-cli build ${{ secrets.COPR_USERNAME }}/${{ secrets.COPR_PROJECT }} mudlet.spec | grep -o 'Build ID: [0-9]*' | cut -d' ' -f3)  
+          echo "Starting COPR build..."  
+          BUILD_OUTPUT=$(copr-cli build ${{ secrets.COPR_PROJECT }} mudlet.spec)  
+          BUILD_ID=$(echo "$BUILD_OUTPUT" | grep -o 'Build ID: [0-9]*' | cut -d' ' -f3)  
           echo "build_id=$BUILD_ID" >> $GITHUB_OUTPUT  
-        continue-on-error: true
+          echo "Build completed. Check details at: https://copr.fedorainfracloud.org/coprs/${{ secrets.COPR_USERNAME }}/${{ secrets.COPR_PROJECT }}/build/$BUILD_ID/"  
+          if echo "$BUILD_OUTPUT" | grep -q "succeeded"; then  
+            echo "Build succeeded!"  
+          else  
+            echo "Build failed!"  
+            exit 1  
+          fi
 
       - name: Report build status  
         if: always()  
