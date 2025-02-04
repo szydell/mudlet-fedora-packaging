@@ -79,11 +79,11 @@ jobs:
         id: copr_build  
         run: |  
           echo "Starting COPR build..."  
-          BUILD_OUTPUT=$(copr-cli build ${{ secrets.COPR_PROJECT }} mudlet.spec)  
-          BUILD_ID=$(echo "$BUILD_OUTPUT" | grep -o 'Build ID: [0-9]*' | cut -d' ' -f3)  
+          copr-cli build ${{ secrets.COPR_PROJECT }} mudlet.spec | tee build_output.txt  
+          BUILD_ID=$(grep -o 'Build ID: [0-9]*' build_output.txt | cut -d' ' -f3)  
           echo "build_id=$BUILD_ID" >> $GITHUB_OUTPUT  
-          echo "Build completed. Check details at: https://copr.fedorainfracloud.org/coprs/${{ secrets.COPR_USERNAME }}/${{ secrets.COPR_PROJECT }}/build/$BUILD_ID/"  
-          if echo "$BUILD_OUTPUT" | grep -q "succeeded"; then  
+          echo "Build details: https://copr.fedorainfracloud.org/coprs/${{ secrets.COPR_USERNAME }}/${{ secrets.COPR_PROJECT }}/build/$BUILD_ID/"  
+          if grep -q "succeeded" build_output.txt; then  
             echo "Build succeeded!"  
           else  
             echo "Build failed!"  
