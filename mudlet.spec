@@ -1,5 +1,5 @@
 Name:           mudlet  
-Version:        Mudlet-4.19.0
+Version:        4.19.0  
 Release:        1%{?dist}  
 Summary:        Crossplatform mud client  
 
@@ -7,7 +7,7 @@ License:        GPL-2.0-or-later
 URL:            https://www.mudlet.org  
 Source0:        https://github.com/Mudlet/Mudlet/archive/Mudlet-%{version}.tar.gz  
 
-BuildRequires:  cmake  
+BuildRequires:  cmake
 BuildRequires:  gcc-c++  
 BuildRequires:  qt5-qtbase-devel  
 BuildRequires:  qt5-qttools-devel  
