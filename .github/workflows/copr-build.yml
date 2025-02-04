@@ -65,26 +65,22 @@ jobs:
           sed -i "s/^* .*/* ${TODAY} Package Maintainer <your@email.com> - ${LATEST_VERSION}-1/" mudlet.spec  
           sed -i "s/- Initial package/- Update to ${LATEST_VERSION}/" mudlet.spec
 
-      - name: Setup COPR config  
-        env:  
-          COPR_TOKEN: ${{ secrets.COPR_TOKEN }}  
-          COPR_USERNAME: ${{ secrets.COPR_USERNAME }}  
-        run: |  
-          mkdir -p ~/.config  
-          echo "[copr-cli]" > ~/.config/copr  
-          echo "login = $COPR_TOKEN" >> ~/.config/copr  
-          echo "username = $COPR_USERNAME" >> ~/.config/copr  
-          echo "copr_url = https://copr.fedorainfracloud.org" >> ~/.config/copr  
-          chmod 600 ~/.config/copr  
-
       - name: Download sources  
         run: |  
           spectool -g mudlet.spec  
 
+      - name: Configure COPR token  
+        run: |  
+          mkdir -p ~/.config  
+          echo '${{ secrets.COPR_CONFIG }}' > ~/.config/copr  
+
       - name: Trigger COPR build  
-        if: env.UPDATE_NEEDED == 'true' || (github.event_name == 'workflow_dispatch' && github.event.inputs.force_rebuild == 'true')
-        run: |
-          copr-cli build ${{ secrets.COPR_USERNAME }}/${{ secrets.COPR_PROJECT }} mudlet.spec
+        if: env.UPDATE_NEEDED == 'true' || (github.event_name == 'workflow_dispatch' && github.event.inputs.force_rebuild == 'true')  
+        id: copr_build  
+        run: |  
+          BUILD_ID=$(copr-cli build ${{ secrets.COPR_USERNAME }}/${{ secrets.COPR_PROJECT }} mudlet.spec | grep -o 'Build ID: [0-9]*' | cut -d' ' -f3)  
+          echo "build_id=$BUILD_ID" >> $GITHUB_OUTPUT  
+        continue-on-error: true
 
       - name: Report build status  
         if: always()  
