@@ -8,6 +8,10 @@ on:
     paths:  
       - 'mudlet.spec'    # Trigger on spec file changes  
 
+permissions:  
+  contents: write
+
+
 jobs:  
   check-and-build:  
     runs-on: ubuntu-latest  
