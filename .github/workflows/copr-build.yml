@@ -22,7 +22,7 @@ jobs:
     steps:  
       - name: Install required packages  
         run: |  
-          dnf install -y copr-cli jq curl git  
+          dnf install -y copr-cli jq curl git rpmdevtools rpm-build
 
       - name: Configure git safe directory  
         run: git config --global --add safe.directory '*'  
