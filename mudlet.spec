@@ -5,7 +5,7 @@ Summary:        Crossplatform mud client
 
 License:        GPL-2.0-or-later  
 URL:            https://www.mudlet.org  
-Source0:        https://github.com/Mudlet/Mudlet/archive/Mudlet-%{version}.tar.gz  
+Source0:        https://github.com/Mudlet/Mudlet/archive/refs/tags/Mudlet-%{version}.tar.gz
 
 BuildRequires:  cmake
 BuildRequires:  gcc-c++  
@@ -43,7 +43,7 @@ Add to that cross-platform capability, an open-source development model,
 and you'll get a very likable MUD client.  
 
 %prep  
-%autosetup -n Mudlet-%{version}  
+%autosetup -n Mudlet-Mudlet-%{version}
 
 %build  
 %cmake  
