@@ -150,13 +150,6 @@ else
   echo "Directory %{_builddir}/.luarocks/lib64/lua/5.1 does not exist"
 fi
 
-lua -v
-ldd /builddir/build/BUILD/mudlet-4.19.0-build/.luarocks/lib64/lua/5.1/yajl.so
-
-# Debugging output  
-echo "Contents of %{_builddir}/usr/lib64/lua/5.1:"  
-ls -l %{_builddir}/usr/lib64/lua/5.1  
-
 # Verify Lua module loading  
 echo "Testing Lua module loading:"  
 lua -e "local yajl = require('yajl'); print('YAJL module loaded successfully')"  
