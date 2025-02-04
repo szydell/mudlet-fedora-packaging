@@ -15,8 +15,7 @@ on:
       - 'mudlet.spec'    # Trigger on spec file changes  
 
 permissions:  
-  contents: write
-
+  contents: write  
 
 jobs:  
   check-and-build:  
@@ -28,21 +27,19 @@ jobs:
     steps:  
       - name: Install required packages  
         run: |  
-          dnf install -y copr-cli jq curl git rpmdevtools rpm-build
+          dnf install -y copr-cli jq curl git rpmdevtools rpm-build  
 
       - name: Configure git safe directory  
         run: git config --global --add safe.directory '*'  
 
-      - uses: actions/checkout@v2  
+      - uses: actions/checkout@v4  
         with:  
           token: ${{ secrets.GITHUB_TOKEN }}  
       
       - name: Check latest Mudlet version  
         id: check_version  
         run: |  
-          GITHUB_VERSION=$(curl -s https://api.github.com/repos/Mudlet/Mudlet/releases/latest | jq -r .tag_name)  
-          # Usuń prefix "Mudlet-" z wersji  
-          LATEST_VERSION=${GITHUB_VERSION#Mudlet-}  
+          LATEST_VERSION=$(curl -s https://api.github.com/repos/Mudlet/Mudlet/releases | jq -r '.[0].tag_name' | sed 's/Mudlet-//')  
           CURRENT_VERSION=$(grep "Version:" mudlet.spec | awk '{print $2}')  
           echo "LATEST_VERSION=$LATEST_VERSION" >> $GITHUB_ENV  
           echo "CURRENT_VERSION=$CURRENT_VERSION" >> $GITHUB_ENV  
@@ -51,6 +48,26 @@ jobs:
           else  
             echo "UPDATE_NEEDED=false" >> $GITHUB_ENV  
           fi  
+          echo "Latest version: $LATEST_VERSION"  
+          echo "Current version: $CURRENT_VERSION"  
+
+      - name: Create Pull Request if new version  
+        if: env.UPDATE_NEEDED == 'true'  
+        uses: peter-evans/create-pull-request@v5  
+        with:  
+          commit-message: "Update Mudlet to version ${{ env.LATEST_VERSION }}"  
+          title: "Update Mudlet to version ${{ env.LATEST_VERSION }}"  
+          body: |  
+            New Mudlet version detected: ${{ env.LATEST_VERSION }}  
+            Current version: ${{ env.CURRENT_VERSION }}  
+            
+            This PR updates the spec file to the latest version.  
+          branch: "update-mudlet-${{ env.LATEST_VERSION }}"  
+          delete-branch: true  
+          base: "main"  
+          labels: |  
+            version-bump  
+            automated-pr  
 
       - name: Update spec file if new version is available  
         if: env.UPDATE_NEEDED == 'true'  
@@ -63,7 +80,7 @@ jobs:
           sed -i "s/Version:.*/Version:        ${LATEST_VERSION}/" mudlet.spec  
           TODAY=$(date +"%a %b %d %Y")  
           sed -i "s/^* .*/* ${TODAY} Package Maintainer <your@email.com> - ${LATEST_VERSION}-1/" mudlet.spec  
-          sed -i "s/- Initial package/- Update to ${LATEST_VERSION}/" mudlet.spec
+          sed -i "s/- Initial package/- Update to ${LATEST_VERSION}/" mudlet.spec  
 
       - name: Download sources  
         run: |  
@@ -88,12 +105,12 @@ jobs:
           else  
             echo "Build failed!"  
             exit 1  
-          fi
+          fi  
 
       - name: Report build status  
         if: always()  
         run: |  
-          if [ "${{ env.UPDATE_NEEDED }}" == "true" ]; then
+          if [ "${{ env.UPDATE_NEEDED }}" == "true" ]; then  
             echo "Build triggered for version ${{ env.LATEST_VERSION }}"  
           else  
             echo "No update needed. Current version: ${{ env.CURRENT_VERSION }}"  
