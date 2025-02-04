@@ -1,5 +1,5 @@
 Name:           mudlet  
-Version:        4.19.1  
+Version:        Mudlet-4.19.0
 Release:        1%{?dist}  
 Summary:        Crossplatform mud client  
 
@@ -64,6 +64,6 @@ desktop-file-validate %{buildroot}/%{_datadir}/applications/mudlet.desktop
 %{_datadir}/metainfo/mudlet.appdata.xml  
 
 %changelog  
-* Tue Feb 04 2025 Package Maintainer <marcin@szydelscy.pl> - 4.19.1-1  
-- Initial package
+* Tue Feb 04 2025 Package Maintainer <your@email.com> - Mudlet-4.19.0-1
+- Update to Mudlet-4.19.0
 
