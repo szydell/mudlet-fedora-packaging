@@ -3,7 +3,13 @@ name: COPR Build
 on:  
   schedule:  
     - cron: '0 0 * * *'  # Run daily at midnight  
-  workflow_dispatch:      # Allow manual trigger  
+  workflow_dispatch:  
+    inputs:  
+      force_rebuild:  
+        description: 'Force rebuild even if version has not changed'  
+        required: true  
+        type: boolean  
+        default: false  
   push:  
     paths:  
       - 'mudlet.spec'    # Trigger on spec file changes  
@@ -76,14 +82,14 @@ jobs:
           spectool -g mudlet.spec  
 
       - name: Trigger COPR build  
-        if: env.UPDATE_NEEDED == 'true' || github.event_name == 'workflow_dispatch'  
-        run: |  
-          copr-cli build ${{ secrets.COPR_USERNAME }}/${{ secrets.COPR_PROJECT }} mudlet.spec  
+        if: env.UPDATE_NEEDED == 'true' || (github.event_name == 'workflow_dispatch' && github.event.inputs.force_rebuild == 'true')
+        run: |
+          copr-cli build ${{ secrets.COPR_USERNAME }}/${{ secrets.COPR_PROJECT }} mudlet.spec
 
       - name: Report build status  
         if: always()  
         run: |  
-          if [ "${{ env.UPDATE_NEEDED }}" == "true" ]; then  
+          if [ "${{ env.UPDATE_NEEDED }}" == "true" ]; then
             echo "Build triggered for version ${{ env.LATEST_VERSION }}"  
           else  
             echo "No update needed. Current version: ${{ env.CURRENT_VERSION }}"  
