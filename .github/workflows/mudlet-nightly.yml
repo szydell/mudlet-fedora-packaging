@@ -1,0 +1,138 @@
+name: COPR Nightly Build
+
+on:
+  schedule:
+    - cron: '0 2 * * *'  # Run daily at 2 AM UTC
+  workflow_dispatch:      # Allow manual trigger
+
+jobs:
+  nightly-build:
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/fedora-copr/fedora-actions-base:latest
+      options: --privileged
+
+    steps:
+      - uses: actions/checkout@v2
+      
+      - name: Get latest commit info
+        run: |
+          COMMIT=$(curl -s https://api.github.com/repos/Mudlet/Mudlet/commits/master | jq -r .sha)
+          COMMIT_SHORT=${COMMIT:0:7}
+          COMMIT_DATE=$(date +%Y%m%d)
+          
+          echo "COMMIT=$COMMIT" >> $GITHUB_ENV
+          echo "COMMIT_SHORT=$COMMIT_SHORT" >> $GITHUB_ENV
+          echo "COMMIT_DATE=$COMMIT_DATE" >> $GITHUB_ENV
+          
+          # Get current date in RPM changelog format
+          echo "RPM_DATE=$(date +'%a %b %d %Y')" >> $GITHUB_ENV
+
+      - name: Generate nightly spec file
+        run: |
+          cat > mudlet-nightly.spec << EOF
+          %global forgeurl https://github.com/Mudlet/Mudlet
+          %global commit ${COMMIT}
+          %global shortcommit ${COMMIT_SHORT}
+          
+          Name:           mudlet-nightly
+          Version:        0.${COMMIT_DATE}git${COMMIT_SHORT}
+          Release:        1%{?dist}
+          Summary:        Cross-platform, open source MUD client with scripting in Lua (nightly build)
+          License:        GPL-2.0-or-later
+          URL:            https://www.mudlet.org
+          
+          # Use tarball from specific commit
+          Source0:        %{forgeurl}/archive/%{commit}/%{name}-%{commit}.tar.gz
+          
+          BuildRequires:  cmake
+          BuildRequires:  gcc-c++
+          BuildRequires:  git
+          BuildRequires:  make
+          BuildRequires:  qt6-qtbase-devel
+          BuildRequires:  qt6-qttools-devel
+          BuildRequires:  qt6-qtmultimedia-devel
+          BuildRequires:  qt6-qtnetworkauth-devel
+          BuildRequires:  hunspell-devel
+          BuildRequires:  libzip-devel
+          BuildRequires:  lua-devel
+          BuildRequires:  pcre-devel
+          BuildRequires:  yajl-devel
+          BuildRequires:  zlib-devel
+          BuildRequires:  boost-devel
+          BuildRequires:  pugixml-devel
+          
+          Requires:       qt6-qtbase
+          Requires:       qt6-qtmultimedia
+          Requires:       qt6-qtnetworkauth
+          Requires:       hunspell
+          Requires:       libzip
+          Requires:       lua
+          Requires:       pcre
+          Requires:       yajl
+          Requires:       zlib
+          Requires:       boost-libs
+          Requires:       pugixml
+          
+          # Conflicts with stable version
+          Conflicts:      mudlet
+          
+          %description
+          Nightly build of Mudlet - a cross-platform, open source MUD client with scripting
+          in Lua. This is a development version and may be unstable.
+          
+          %prep
+          %autosetup -n Mudlet-%{commit}
+          
+          %build
+          %cmake -DCMAKE_BUILD_TYPE=Release \
+                 -DWITH_UPDATER=OFF \
+                 -DENABLE_DISCORD=OFF \
+                 -DCMAKE_INSTALL_PREFIX=%{_prefix}
+          %cmake_build
+          
+          %install
+          %cmake_install
+          
+          # Rename binary and desktop file to avoid conflicts with stable version
+          mv %{buildroot}%{_bindir}/mudlet %{buildroot}%{_bindir}/%{name}
+          mv %{buildroot}%{_datadir}/applications/mudlet.desktop %{buildroot}%{_datadir}/applications/%{name}.desktop
+          sed -i 's/Name=Mudlet/Name=Mudlet Nightly/g' %{buildroot}%{_datadir}/applications/%{name}.desktop
+          sed -i 's/Exec=mudlet/Exec=mudlet-nightly/g' %{buildroot}%{_datadir}/applications/%{name}.desktop
+          
+          %files
+          %license COPYING
+          %doc README.md
+          %{_bindir}/%{name}
+          %{_datadir}/applications/%{name}.desktop
+          %{_datadir}/icons/hicolor/*/apps/mudlet.png
+          %{_datadir}/mudlet/
+          
+          %changelog
+          * ${RPM_DATE} Package Maintainer <your@email.com> - 0.${COMMIT_DATE}git${COMMIT_SHORT}-1
+          - Nightly build from commit ${COMMIT_SHORT}
+          EOF
+
+      - name: Trigger COPR build
+        env:
+          COPR_TOKEN: ${{ secrets.COPR_TOKEN }}
+        run: |
+          # Encode spec file content in base64
+          SPEC_CONTENT=$(base64 -w 0 mudlet-nightly.spec)
+          
+          # Submit build to COPR
+          curl -X POST \
+            -H "Authorization: Bearer $COPR_TOKEN" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "source_type": "spec",
+              "spec_content": "'"${SPEC_CONTENT}"'",
+              "chroots": ["fedora-rawhide-x86_64", "fedora-39-x86_64", "fedora-38-x86_64"]
+            }' \
+            https://copr.fedorainfracloud.org/api_3/build/create/${{ secrets.COPR_USERNAME }}/${{ secrets.COPR_PROJECT_NIGHTLY }}/
+
+      - name: Report build status
+        if: always()
+        run: |
+          echo "Nightly build triggered for commit ${COMMIT_SHORT} (${COMMIT_DATE})"
+

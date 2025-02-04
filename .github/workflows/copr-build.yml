@@ -1,0 +1,77 @@
+name: COPR Build
+
+on:
+  schedule:
+    - cron: '0 0 * * *'  # Run daily at midnight
+  workflow_dispatch:      # Allow manual trigger
+  push:
+    paths:
+      - 'mudlet.spec'    # Trigger on spec file changes
+
+jobs:
+  check-and-build:
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/fedora-copr/fedora-actions-base:latest
+      options: --privileged
+
+    steps:
+      - uses: actions/checkout@v2
+      
+      - name: Check latest Mudlet version
+        id: check_version
+        run: |
+          LATEST_VERSION=$(curl -s https://api.github.com/repos/Mudlet/Mudlet/releases/latest | jq -r .tag_name | sed 's/^v//')
+          CURRENT_VERSION=$(grep "Version:" mudlet.spec | awk '{print $2}')
+          echo "LATEST_VERSION=$LATEST_VERSION" >> $GITHUB_ENV
+          echo "CURRENT_VERSION=$CURRENT_VERSION" >> $GITHUB_ENV
+          if [ "$LATEST_VERSION" != "$CURRENT_VERSION" ]; then
+            echo "UPDATE_NEEDED=true" >> $GITHUB_ENV
+          else
+            echo "UPDATE_NEEDED=false" >> $GITHUB_ENV
+          fi
+
+      - name: Update spec file if new version is available
+        if: env.UPDATE_NEEDED == 'true'
+        run: |
+          sed -i "s/Version:.*/Version:        ${{ env.LATEST_VERSION }}/" mudlet.spec
+          # Update changelog
+          TODAY=$(date +"%a %b %d %Y")
+          sed -i "s/^* .*/* ${TODAY} Package Maintainer <your@email.com> - ${{ env.LATEST_VERSION }}-1/" mudlet.spec
+          sed -i "s/- Initial package/- Update to ${{ env.LATEST_VERSION }}/" mudlet.spec
+          
+          # Configure git
+          git config --global user.email "github-actions@github.com"
+          git config --global user.name "GitHub Actions"
+          git add mudlet.spec
+          git commit -m "Update to version ${{ env.LATEST_VERSION }}"
+          git push
+
+      - name: Trigger COPR build
+        if: env.UPDATE_NEEDED == 'true' || github.event_name == 'workflow_dispatch'
+        env:
+          COPR_TOKEN: ${{ secrets.COPR_TOKEN }}
+        run: |
+          # Encode spec file content in base64
+          SPEC_CONTENT=$(base64 -w 0 mudlet.spec)
+          
+          # Submit build to COPR
+          curl -X POST \
+            -H "Authorization: Bearer $COPR_TOKEN" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "source_type": "spec",
+              "spec_content": "'"${SPEC_CONTENT}"'",
+              "chroots": ["fedora-rawhide-x86_64", "fedora-39-x86_64", "fedora-38-x86_64"]
+            }' \
+            https://copr.fedorainfracloud.org/api_3/build/create/${{ secrets.COPR_USERNAME }}/${{ secrets.COPR_PROJECT }}/
+
+      - name: Report build status
+        if: always()
+        run: |
+          if [ "${{ env.UPDATE_NEEDED }}" == "true" ]; then
+            echo "Build triggered for version ${{ env.LATEST_VERSION }}"
+          else
+            echo "No update needed. Current version: ${{ env.CURRENT_VERSION }}"
+          fi
+
