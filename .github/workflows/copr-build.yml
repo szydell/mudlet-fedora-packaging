@@ -46,7 +46,6 @@ jobs:
           CURRENT_RELEASE=$(grep "Release:" mudlet.spec | awk '{print $2}' | cut -d'-' -f1)  
           echo "LATEST_VERSION=$LATEST_VERSION" >> $GITHUB_ENV  
           echo "CURRENT_VERSION=$CURRENT_VERSION" >> $GITHUB_ENV  
-          echo "CURRENT_RELEASE=$CURRENT_RELEASE"
           echo "CURRENT_RELEASE=$CURRENT_RELEASE" >> $GITHUB_ENV  
           if [ "$LATEST_VERSION" != "$CURRENT_VERSION" ]; then  
             echo "UPDATE_NEEDED=true" >> $GITHUB_ENV  
@@ -70,7 +69,7 @@ jobs:
             TODAY=$(date +"%a %b %d %Y")  
             sed -i "s/^* .*/* ${TODAY} Package Maintainer <your@email.com> - ${LATEST_VERSION}-1/" mudlet.spec  
             sed -i "s/- Initial package/- Update to ${LATEST_VERSION}/" mudlet.spec  
-          else  
+          elif [ "${{ github.event_name }}" == "workflow_dispatch" ] && [ "${{ github.event.inputs.force_rebuild }}" == "true" ]; then  
             # If rebuilding the same version, increment the Release number  
             NEW_RELEASE=$((CURRENT_RELEASE + 1))  
             sed -i "s/Release:.*/Release:        ${NEW_RELEASE}%{?dist}/" mudlet.spec  
@@ -123,7 +122,9 @@ jobs:
         run: |  
           if [ "${{ env.UPDATE_NEEDED }}" == "true" ]; then  
             echo "Build triggered for version ${{ env.LATEST_VERSION }}"  
+          elif [ "${{ github.event_name }}" == "workflow_dispatch" ] && [ "${{ github.event.inputs.force_rebuild }}" == "true" ]; then  
+            echo "Rebuild triggered. Current release: $((CURRENT_RELEASE + 1))"  
           else  
             echo "No update needed. Current version: ${{ env.CURRENT_VERSION }}"  
-            echo "Rebuild triggered. Current release: $((CURRENT_RELEASE + 1))"
+          fi
 
