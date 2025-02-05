@@ -39,12 +39,14 @@ jobs:
       - name: Check latest Mudlet version  
         id: check_version  
         run: |  
-          # Pobierz wszystkie tagi, posortuj wg wersji i weź najnowszy  
+          # Fetch all tags, sort them by version, and get the latest one  
           LATEST_TAG=$(curl -s https://api.github.com/repos/Mudlet/Mudlet/tags | jq -r '.[].name' | grep '^Mudlet-[0-9]' | sort -V | tail -n1)  
           LATEST_VERSION=${LATEST_TAG#Mudlet-}  
           CURRENT_VERSION=$(grep "Version:" mudlet.spec | awk '{print $2}')  
+          CURRENT_RELEASE=$(grep "Release:" mudlet.spec | awk '{print $2}' | cut -d'-' -f1)  
           echo "LATEST_VERSION=$LATEST_VERSION" >> $GITHUB_ENV  
           echo "CURRENT_VERSION=$CURRENT_VERSION" >> $GITHUB_ENV  
+          echo "CURRENT_RELEASE=$CURRENT_RELEASE" >> $GITHUB_ENV  
           if [ "$LATEST_VERSION" != "$CURRENT_VERSION" ]; then  
             echo "UPDATE_NEEDED=true" >> $GITHUB_ENV  
           else  
@@ -52,37 +54,43 @@ jobs:
           fi  
           echo "Latest version from tags: $LATEST_VERSION"  
           echo "Current version: $CURRENT_VERSION"  
+          echo "Current release: $CURRENT_RELEASE"  
 
-      - name: Create Pull Request if new version  
-        if: env.UPDATE_NEEDED == 'true'  
-        uses: peter-evans/create-pull-request@v5  
-        with:  
-          commit-message: "Update Mudlet to version ${{ env.LATEST_VERSION }}"  
-          title: "Update Mudlet to version ${{ env.LATEST_VERSION }}"  
-          body: |  
-            New Mudlet version detected: ${{ env.LATEST_VERSION }}  
-            Current version: ${{ env.CURRENT_VERSION }}  
-            
-            This PR updates the spec file to the latest version.  
-          branch: "update-mudlet-${{ env.LATEST_VERSION }}"  
-          delete-branch: true  
-          base: "main"  
-          labels: |  
-            version-bump  
-            automated-pr  
-
-      - name: Update spec file if new version is available  
-        if: env.UPDATE_NEEDED == 'true'  
+      - name: Update spec file if new version or rebuild  
         run: |  
           # Configure git  
           git config --global user.email "github-actions@github.com"  
           git config --global user.name "GitHub Actions"  
-          
-          # Update spec file  
-          sed -i "s/Version:.*/Version:        ${LATEST_VERSION}/" mudlet.spec  
-          TODAY=$(date +"%a %b %d %Y")  
-          sed -i "s/^* .*/* ${TODAY} Package Maintainer <your@email.com> - ${LATEST_VERSION}-1/" mudlet.spec  
-          sed -i "s/- Initial package/- Update to ${LATEST_VERSION}/" mudlet.spec  
+
+          # If a new version is detected, reset Release to 1  
+          if [ "${{ env.UPDATE_NEEDED }}" == "true" ]; then  
+            sed -i "s/Version:.*/Version:        ${LATEST_VERSION}/" mudlet.spec  
+            sed -i "s/Release:.*/Release:        1%{?dist}/" mudlet.spec  
+            TODAY=$(date +"%a %b %d %Y")  
+            sed -i "s/^* .*/* ${TODAY} Package Maintainer <your@email.com> - ${LATEST_VERSION}-1/" mudlet.spec  
+            sed -i "s/- Initial package/- Update to ${LATEST_VERSION}/" mudlet.spec  
+          else  
+            # If rebuilding the same version, increment the Release number  
+            NEW_RELEASE=$((CURRENT_RELEASE + 1))  
+            sed -i "s/Release:.*/Release:        ${NEW_RELEASE}%{?dist}/" mudlet.spec  
+            TODAY=$(date +"%a %b %d %Y")  
+            sed -i "s/^* .*/* ${TODAY} Package Maintainer <your@email.com> - ${CURRENT_VERSION}-${NEW_RELEASE}/" mudlet.spec  
+            sed -i "s/- Initial package/- Rebuild version ${CURRENT_VERSION}-${NEW_RELEASE}/" mudlet.spec  
+          fi  
+
+      - name: Commit and push changes  
+        if: env.UPDATE_NEEDED == 'true' || (github.event_name == 'workflow_dispatch' && github.event.inputs.force_rebuild == 'true')  
+        run: |  
+          # Add and commit changes to the spec file  
+          git add mudlet.spec  
+          if [ "${{ env.UPDATE_NEEDED }}" == "true" ]; then  
+            git commit -m "Update Mudlet to version ${{ env.LATEST_VERSION }}"  
+          else  
+            git commit -m "Rebuild Mudlet version ${{ env.CURRENT_VERSION }}-${NEW_RELEASE}"  
+          fi  
+
+          # Push changes back to the repository  
+          git push origin HEAD  
 
       - name: Download sources  
         run: |  
@@ -116,5 +124,5 @@ jobs:
             echo "Build triggered for version ${{ env.LATEST_VERSION }}"  
           else  
             echo "No update needed. Current version: ${{ env.CURRENT_VERSION }}"  
-          fi
+            echo "Rebuild triggered. Current release: $((CURRENT_RELEASE + 1))"
 
