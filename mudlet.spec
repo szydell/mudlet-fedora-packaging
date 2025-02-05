@@ -1,6 +1,6 @@
 Name:           mudlet  
 Version:        4.19.1
-Release:        1%{?dist}
+Release:        2%{?dist}
 Summary:        Crossplatform mud client  
 
 License:        GPL-2.0-or-later  
@@ -231,7 +231,7 @@ This package contains debug information for Mudlet.
 
 
 %changelog  
-* Wed Feb 05 2025 Package Maintainer <your@email.com> - 4.19.1-1
+* Wed Feb 05 2025 Package Maintainer <your@email.com> - 4.19.1-2
 - Update to version 4.19.0  
 - Switched to Qt6  
 - Improved Lua module handling  
