@@ -63,11 +63,16 @@ jobs:
           git config --global user.name "GitHub Actions"  
 
           # Detect if spec file was modified  
-          if git diff --name-only HEAD^1 HEAD | grep -q "mudlet.spec"; then  
+          if git diff --name-only HEAD~1 HEAD 2>/dev/null | grep -q "mudlet.spec"; then  
             echo "SPEC_MODIFIED=true" >> $GITHUB_ENV  
           else  
-            echo "SPEC_MODIFIED=false" >> $GITHUB_ENV  
-          fi  
+             # Fallback for the first commit or empty history  
+             if git ls-files --modified | grep -q "mudlet.spec"; then  
+               echo "SPEC_MODIFIED=true" >> $GITHUB_ENV  
+             else  
+               echo "SPEC_MODIFIED=false" >> $GITHUB_ENV  
+            fi  
+          fi 
 
           # If a new version is detected, reset Release to 1  
           if [ "${{ env.UPDATE_NEEDED }}" == "true" ]; then  
