@@ -1,19 +1,21 @@
-diff --git a/3rdparty/edbee-lib/vendor/onig/regparse.c b/3rdparty/edbee-lib/vendor/onig/regparse.c
-index abcdef1..abcdef2 100644
---- a/3rdparty/edbee-lib/vendor/onig/regparse.c
-+++ b/3rdparty/edbee-lib/vendor/onig/regparse.c
-@@ In function ‘onig_st_init_strend_table_with_size’:
-
-str_end_cmp,
-str_end_hash,
-(int (*)(void))str_end_cmp,
-(st_index_t (*)(void))str_end_hash,
-@@ In function ‘names_clear’:
-onig_st_foreach(t, i_free_name_entry, 0);
-onig_st_foreach(t, (int (*)(void))i_free_name_entry, 0);
-@@ In function ‘onig_foreach_name’:
-onig_st_foreach(t, i_names, (HashDataType)&narg);
-onig_st_foreach(t, (int (*)(void))i_names, (HashDataType)&narg);
-@@ In function ‘onig_renumber_name_table’:
-onig_st_foreach(t, i_renumber_name, (HashDataType)map);
-onig_st_foreach(t, (int (*)(void))i_renumber_name, (HashDataType)map);
+diff --git a/3rdparty/edbee-lib/vendor/onig/regparse.c b/3rdparty/edbee-lib/vendor/onig/regparse.c  
+index abcdef1..abcdef2 100644  
+--- a/3rdparty/edbee-lib/vendor/onig/regparse.c  
++++ b/3rdparty/edbee-lib/vendor/onig/regparse.c  
+@@ -409,8 +409,8 @@ onig_st_init_strend_table_with_size(int size)  
+-    str_end_cmp,  
+-    str_end_hash,  
++    (int (*)(void))str_end_cmp,  
++    (st_index_t (*)(void))str_end_hash,  
+   
+@@ -519,7 +519,7 @@ names_clear(void)  
+-    onig_st_foreach(t, i_free_name_entry, 0);  
++    onig_st_foreach(t, (int (*)(void))i_free_name_entry, 0);  
+   
+@@ -588,7 +588,7 @@ onig_foreach_name(regex_t* reg, int (*func)(const UChar*, const UChar*, int,int*,regex_t*,void*), void* arg)  
+-    onig_st_foreach(t, i_names, (HashDataType)&narg);  
++    onig_st_foreach(t, (int (*)(void))i_names, (HashDataType)&narg);  
+   
+@@ -616,7 +616,7 @@ onig_renumber_name_table(regex_t* reg, GroupNumRemap* map)  
+-    onig_st_foreach(t, i_renumber_name, (HashDataType)map);  
++    onig_st_foreach(t, (int (*)(void))i_renumber_name, (HashDataType)map);
