@@ -5,7 +5,6 @@ Summary:        Crossplatform mud client
 
 License:        GPL-2.0-or-later  
 URL:            https://www.mudlet.org  
-#Source0:        https://github.com/Mudlet/Mudlet/archive/refs/tags/Mudlet-{version}.tar.gz
 Patch0:         https://github.com/szydell/mudlet-fedora-packaging/raw/refs/heads/main/regparse.patch
 
 
