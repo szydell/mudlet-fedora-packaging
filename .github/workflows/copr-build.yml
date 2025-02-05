@@ -43,7 +43,7 @@ jobs:
           LATEST_TAG=$(curl -s https://api.github.com/repos/Mudlet/Mudlet/tags | jq -r '.[].name' | grep '^Mudlet-[0-9]' | sort -V | tail -n1)  
           LATEST_VERSION=${LATEST_TAG#Mudlet-}  
           CURRENT_VERSION=$(grep "Version:" mudlet.spec | awk '{print $2}')  
-          CURRENT_RELEASE=$(grep "Release:" mudlet.spec | awk '{print $2}' | cut -d'-' -f1)  
+          CURRENT_RELEASE=$(grep "Release:" mudlet.spec | awk '{print $2}' | sed 's/%{.*//') 
           echo "LATEST_VERSION=$LATEST_VERSION" >> $GITHUB_ENV  
           echo "CURRENT_VERSION=$CURRENT_VERSION" >> $GITHUB_ENV  
           echo "CURRENT_RELEASE=$CURRENT_RELEASE" >> $GITHUB_ENV  
