@@ -43,7 +43,7 @@ jobs:
           LATEST_TAG=$(curl -s https://api.github.com/repos/Mudlet/Mudlet/tags | jq -r '.[].name' | grep '^Mudlet-[0-9]' | sort -V | tail -n1)  
           LATEST_VERSION=${LATEST_TAG#Mudlet-}  
           CURRENT_VERSION=$(grep "Version:" mudlet.spec | awk '{print $2}')  
-          CURRENT_RELEASE=$(grep "Release:" mudlet.spec | awk '{print $2}' | sed 's/%{.*//') 
+          CURRENT_RELEASE=$(grep "Release:" mudlet.spec | awk '{print $2}' | sed 's/%{.*//')   
           echo "LATEST_VERSION=$LATEST_VERSION" >> $GITHUB_ENV  
           echo "CURRENT_VERSION=$CURRENT_VERSION" >> $GITHUB_ENV  
           echo "CURRENT_RELEASE=$CURRENT_RELEASE" >> $GITHUB_ENV  
@@ -56,11 +56,18 @@ jobs:
           echo "Current version: $CURRENT_VERSION"  
           echo "Current release: $CURRENT_RELEASE"  
 
-      - name: Update spec file if new version or rebuild  
+      - name: Update spec file if new version, rebuild, or spec change  
         run: |  
           # Configure git  
           git config --global user.email "github-actions@github.com"  
           git config --global user.name "GitHub Actions"  
+
+          # Detect if spec file was modified  
+          if git diff --name-only HEAD^1 HEAD | grep -q "mudlet.spec"; then  
+            echo "SPEC_MODIFIED=true" >> $GITHUB_ENV  
+          else  
+            echo "SPEC_MODIFIED=false" >> $GITHUB_ENV  
+          fi  
 
           # If a new version is detected, reset Release to 1  
           if [ "${{ env.UPDATE_NEEDED }}" == "true" ]; then  
@@ -76,15 +83,24 @@ jobs:
             TODAY=$(date +"%a %b %d %Y")  
             sed -i "s/^* .*/* ${TODAY} Package Maintainer <your@email.com> - ${CURRENT_VERSION}-${NEW_RELEASE}/" mudlet.spec  
             sed -i "s/- Initial package/- Rebuild version ${CURRENT_VERSION}-${NEW_RELEASE}/" mudlet.spec  
+          elif [ "${{ env.SPEC_MODIFIED }}" == "true" ]; then  
+            # If spec file was modified, increment the Release number  
+            NEW_RELEASE=$((CURRENT_RELEASE + 1))  
+            sed -i "s/Release:.*/Release:        ${NEW_RELEASE}%{?dist}/" mudlet.spec  
+            TODAY=$(date +"%a %b %d %Y")  
+            sed -i "s/^* .*/* ${TODAY} Package Maintainer <your@email.com> - ${CURRENT_VERSION}-${NEW_RELEASE}/" mudlet.spec  
+            sed -i "s/- Initial package/- Spec file modified, rebuild version ${CURRENT_VERSION}-${NEW_RELEASE}/" mudlet.spec  
           fi  
 
       - name: Commit and push changes  
-        if: env.UPDATE_NEEDED == 'true' || (github.event_name == 'workflow_dispatch' && github.event.inputs.force_rebuild == 'true')  
+        if: env.UPDATE_NEEDED == 'true' || env.SPEC_MODIFIED == 'true' || (github.event_name == 'workflow_dispatch' && github.event.inputs.force_rebuild == 'true')  
         run: |  
           # Add and commit changes to the spec file  
           git add mudlet.spec  
           if [ "${{ env.UPDATE_NEEDED }}" == "true" ]; then  
             git commit -m "Update Mudlet to version ${{ env.LATEST_VERSION }}"  
+          elif [ "${{ env.SPEC_MODIFIED }}" == "true" ]; then  
+            git commit -m "Rebuild due to spec file modification"  
           else  
             git commit -m "Rebuild Mudlet version ${{ env.CURRENT_VERSION }}-${NEW_RELEASE}"  
           fi  
@@ -102,7 +118,7 @@ jobs:
           echo '${{ secrets.COPR_CONFIG }}' > ~/.config/copr  
 
       - name: Trigger COPR build  
-        if: env.UPDATE_NEEDED == 'true' || (github.event_name == 'workflow_dispatch' && github.event.inputs.force_rebuild == 'true')  
+        if: env.UPDATE_NEEDED == 'true' || env.SPEC_MODIFIED == 'true' || (github.event_name == 'workflow_dispatch' && github.event.inputs.force_rebuild == 'true')  
         id: copr_build  
         run: |  
           echo "Starting COPR build..."  
@@ -122,6 +138,8 @@ jobs:
         run: |  
           if [ "${{ env.UPDATE_NEEDED }}" == "true" ]; then  
             echo "Build triggered for version ${{ env.LATEST_VERSION }}"  
+          elif [ "${{ env.SPEC_MODIFIED }}" == "true" ]; then  
+            echo "Build triggered due to spec file modification."  
           elif [ "${{ github.event_name }}" == "workflow_dispatch" ] && [ "${{ github.event.inputs.force_rebuild }}" == "true" ]; then  
             echo "Rebuild triggered. Current release: $((CURRENT_RELEASE + 1))"  
           else  
