@@ -88,12 +88,12 @@ and you'll get a very likable MUD client.
 mkdir -p %{luarocks_tree}
 export LUA_PATH="%{luarocks_tree}/share/lua/5.1/?.lua;;"
 export LUA_CPATH="%{luarocks_tree}/lib/lua/5.1/?.so;;"
-luarocks --lua-version 5.1 --tree=%{luarocks_tree} install luazip --no-rpath
-luarocks --lua-version 5.1 --tree=%{luarocks_tree} install luasql-sqlite3 --no-rpath
-luarocks --lua-version 5.1 --tree=%{luarocks_tree} install lcf --no-rpath
-luarocks --lua-version 5.1 --tree=%{luarocks_tree} install luautf8 --no-rpath
-luarocks --lua-version 5.1 --tree=%{luarocks_tree} install lua-yajl --no-rpath
-luarocks --lua-version 5.1 --tree=%{luarocks_tree} install lrexlib-pcre --no-rpath
+luarocks --lua-version 5.1 --tree=%{luarocks_tree} install luazip
+luarocks --lua-version 5.1 --tree=%{luarocks_tree} install luasql-sqlite3
+luarocks --lua-version 5.1 --tree=%{luarocks_tree} install lcf
+luarocks --lua-version 5.1 --tree=%{luarocks_tree} install luautf8
+luarocks --lua-version 5.1 --tree=%{luarocks_tree} install lua-yajl
+luarocks --lua-version 5.1 --tree=%{luarocks_tree} install lrexlib-pcre
 
 # source code
 git clone --recursive --branch=Mudlet-%{version} https://github.com/Mudlet/Mudlet.git
@@ -134,11 +134,9 @@ if [ -d %{luarocks_tree}/lib64/lua/5.1 ]; then
   cp -r %{luarocks_tree}/lib64/lua/5.1/* %{buildroot}%{_libdir}/lua/5.1/
 fi
 
-# Usuń RPATH z bibliotek Lua  
+# rm rpath from lua5.1 rocks packages 
 if [ -d %{buildroot}%{_libdir}/lua/5.1 ]; then  
-  for lib in %{buildroot}%{_libdir}/lua/5.1/*.so; do  
-    chrpath --delete "$lib" || :  
-  done  
+  find %{buildroot}%{_libdir}/lua/5.1 -name '*.so' -exec chrpath --delete {} \; || :  
 fi
 
 # Install the icon file  
