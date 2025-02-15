@@ -129,9 +129,9 @@ if [ -d %{luarocks_tree}/share/lua/5.1 ]; then
   cp -r %{luarocks_tree}/share/lua/5.1/* %{buildroot}%{_datadir}/lua/5.1/
 fi  
 
-if [ -d %{luarocks_tree}/lib/lua/5.1 ]; then
+if [ -d %{luarocks_tree}/lib64/lua/5.1 ]; then
   mkdir -p %{buildroot}%{_libdir}/lua/5.1  
-  cp -r %{luarocks_tree}/lib/lua/5.1/* %{buildroot}%{_libdir}/lua/5.1/
+  cp -r %{luarocks_tree}/lib64/lua/5.1/* %{buildroot}%{_libdir}/lua/5.1/
 fi
 
 # Install the icon file  
