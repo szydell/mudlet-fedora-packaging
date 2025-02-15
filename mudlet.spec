@@ -13,21 +13,27 @@ BuildRequires:  cmake
 BuildRequires:  gcc  
 BuildRequires:  gcc-c++  
 BuildRequires:  libasan
+BuildRequires:  qt6-rpm-macros
 # Qt6 requirements  
 BuildRequires:  qt6-qtbase-devel  
 BuildRequires:  qt6-qtdeclarative-devel  
 BuildRequires:  qt6-qtmultimedia-devel  
-BuildRequires:  qt6-qttools-devel  
+BuildRequires:  qt6-qttools-devel
+BuildRequires:  qt6-qttools
+BuildRequires:  qt6-qttools-static
 BuildRequires:  qt6-qt5compat-devel  
 BuildRequires:  qt6-qtwebsockets-devel  
 BuildRequires:  qt6-qtsvg-devel  
-BuildRequires:  qt6-qtnetworkauth-devel  
+BuildRequires:  qt6-qtnetworkauth-devel
+BuildRequires:  qtkeychain-qt6-devel
 # Lua requirements  
-BuildRequires:  compat-lua  
-BuildRequires:  compat-lua-devel  
+BuildRequires:  compat-lua
+BuildRequires:  compat-lua-devel
+BuildRequires:  compat-lua-libs
 BuildRequires:  luarocks  
 BuildRequires:  sqlite-devel  
-BuildRequires:  zziplib-devel  
+BuildRequires:  zziplib-devel
+BuildRequires:  lua5.1-filesystem
 # Other dependencies  
 BuildRequires:  hunspell-devel  
 BuildRequires:  yajl-devel  
@@ -38,7 +44,7 @@ BuildRequires:  boost-devel
 BuildRequires:  libzip-devel  
 BuildRequires:  openssl-devel  
 BuildRequires:  desktop-file-utils  
-BuildRequires:  git  
+BuildRequires:  git
 BuildRequires:  libsecret-devel  
 BuildRequires:  mesa-libGL-devel  
 BuildRequires:  mesa-libGLU-devel
@@ -46,21 +52,25 @@ BuildRequires:  libxkbcommon-devel
 BuildRequires:  chrpath
 
 # Runtime requirements  
-Requires:       qt6-qtbase  
-Requires:       qt6-qtmultimedia  
+Requires:       qt6-qtbase
+Requires:       qt6-qtmultimedia
 Requires:       qtkeychain-qt6
-Requires:       hunspell  
-Requires:       yajl  
-Requires:       lua  
-Requires:       pcre  
-Requires:       pugixml  
-Requires:       libzip  
-Requires:       openssl  
-Requires:       compat-lua  
-Requires:       sqlite-libs  
-Requires:       zziplib  
-Requires:       mesa-libGL  
-Requires:       mesa-libGLU  
+Requires:       qt6-qttools
+Requires:       qt6-qttools-static
+Requires:       hunspell
+Requires:       yajl
+Requires:       pcre
+Requires:       pugixml
+Requires:       libzip
+Requires:       openssl
+Requires:       compat-lua
+Requires:       compat-lua-libs
+Requires:       sqlite-libs
+Requires:       zziplib
+Requires:       mesa-libGL
+Requires:       mesa-libGLU
+Requires:       lua5.1-filesystem 
+Requires:       bitstream-vera-fonts-all
 
 %description  
 Mudlet is a quality MUD client, designed to take mudding to a new level.
@@ -70,137 +80,85 @@ a specially designed scripting framework, and a very fast text display.
 Add to that cross-platform capability, an open-source development model,
 and you'll get a very likable MUD client.
 
+%global luarocks_tree %{_builddir}/luarocks  
+
 %prep  
-  
-# repo fetch
-git init  
-git remote add origin https://github.com/Mudlet/Mudlet.git  
-git fetch --depth 1 origin Mudlet-%{version}  
-git checkout FETCH_HEAD
 
-# get submodules
-git submodule update --init --recursive --depth 1  
+#lua5.1 rocks packages
+mkdir -p %{luarocks_tree}
+export LUA_PATH="%{luarocks_tree}/share/lua/5.1/?.lua;;"
+export LUA_CPATH="%{luarocks_tree}/lib/lua/5.1/?.so;;"
+luarocks --lua-version 5.1 --tree=%{luarocks_tree} install luazip  
+luarocks --lua-version 5.1 --tree=%{luarocks_tree} install luasql-sqlite3  
+luarocks --lua-version 5.1 --tree=%{luarocks_tree} install lcf  
+luarocks --lua-version 5.1 --tree=%{luarocks_tree} install luautf8  
+luarocks --lua-version 5.1 --tree=%{luarocks_tree} install lua-yajl  
+luarocks --lua-version 5.1 --tree=%{luarocks_tree} install lrexlib-pcre
 
-# Patch
-%patch 0 -p1
+# source code
+git clone --recursive --branch=Mudlet-%{version} https://github.com/Mudlet/Mudlet.git
 
-# Create git info file for build system  
-#echo "#define APP_BUILD \"$(cd ../mudlet-git && git rev-parse HEAD)\"" > src/app-git-sha.h  
+cd Mudlet
+mkdir build
 
-alias lua='/usr/bin/lua-5.1'  
-
-lua -v
-
-# Configure luarocks to use Lua 5.1  
-luarocks config --local lua_interpreter lua5.1  
-luarocks config --local lua_version 5.1
-# Add debug symbols
-export CFLAGS="%{optflags} -g"  
-export CXXFLAGS="%{optflags} -g"  
-export LDFLAGS="%{optflags}"  
-# Install required Lua packages  
-luarocks --lua-version 5.1 --tree=%{_builddir}/.luarocks install luazip ZZIP_DIR=/usr || echo "Failed to install luazip"
-luarocks --lua-version 5.1 --tree=%{_builddir}/.luarocks install luasql-sqlite3 || echo "Failed to install luasql-sqlite3"
-luarocks --lua-version 5.1 --tree=%{_builddir}/.luarocks install lcf || echo "Failed to install lcf"
-luarocks --lua-version 5.1 --tree=%{_builddir}/.luarocks install luautf8 || echo "Failed to install luautf8"
-luarocks --lua-version 5.1 --tree=%{_builddir}/.luarocks install lua-yajl || echo "Failed to install lua-yajl"
-luarocks --lua-version 5.1 --tree=%{_builddir}/.luarocks install lrexlib-pcre || echo "Failed to install lrexlib-pcre"
-luarocks --lua-version 5.1 --tree=%{_builddir}/.luarocks install luafilesystem || echo "Failed to install luafilesystem"
-
-export LUA_PATH="%{_builddir}/.luarocks/share/lua/5.1/?.lua;%{_builddir}/.luarocks/share/lua/5.1/?/init.lua;;"  
-export LUA_CPATH="%{_builddir}/.luarocks/lib64/lua/5.1/?.so;;"
-
-# Ensure the lib64 directory for lua exists  
-mkdir -p %{_builddir}/usr/lib64/lua
-
-# Symlink the lua/5.1 directory into /usr/lib64/lua
-if [ -d %{_builddir}/.luarocks/lib64/lua/5.1 ]; then
-  ln -s %{_builddir}/.luarocks/lib64/lua/5.1 %{_builddir}/usr/lib64/lua/5.1
-else
-  echo "Directory %{_builddir}/.luarocks/lib64/lua/5.1 does not exist"
-fi
-
-# Verify Lua module loading  
-echo "Testing Lua module loading:"  
-lua -e "local yajl = require('yajl'); print('YAJL module loaded successfully')"  
-
-find .
-
-%build  
-export LUA_CPATH="%{_builddir}/.luarocks/lib64/lua/5.1/?.so;;"  
-export LUA_EXECUTABLE=/usr/bin/lua-5.1  
-export LUA_INCLUDE_DIR=/usr/include/lua5.1  
-
-%cmake \
-    -DCMAKE_BUILD_TYPE=Release \
-    -DWITH_FONTS=ON \
-    -DUSE_UPDATER="" \
-    -DWITH_OWN_QTKEYCHAIN=ON \
-    -DFORCE_USE_QT6=ON \
-    -DWITH_3DMAPPER=ON \
-    -DUSE_BUILTIN_LUA=ON \
-    -DOpenGL_GL_PREFERENCE=GLVND \
-    -DUSE_SANITIZER=""
-
-%cmake_build
+#fix mudlet.pro for Fedora
+sed -i '/linux {/,/}/ {  
+    s/-llua5\.1/-llua-5.1/  
+    s/-lhunspell/-lhunspell-1.7/  
+    s|/usr/include/lua5\.1|/usr/include/lua-5.1|  
+}' src/mudlet.pro
 
 
-%install  
-%cmake_install  
+%build
+#lua5.1 rocks packages
+export LUA_PATH="%{luarocks_tree}/share/lua/5.1/?.lua;;"
+export LUA_CPATH="%{luarocks_tree}/lib/lua/5.1/?.so;;"
 
-mkdir -p %{buildroot}/usr/lib64/lua/5.1  
+cd Mudlet/build
+WITH_FONTS=NO WITH_OWN_QTKEYCHAIN=NO WITH_UPDATER=NO WITH_VARIABLE_SPLASH_SCREEN=NO XDG_DATA_DIRS=/usr/share %qmake_qt6 PREFIX=%{_qt6_prefix} INCLUDEPATH+=/usr/include/lua-5.1 LUA_SEARCH_OUT=lua-5.1 ../src/mudlet.pro
+make %{?_smp_mflags}  
 
-if [ -d %{_builddir}/.luarocks/lib64/lua/5.1 ]; then  
-    cp -r %{_builddir}/.luarocks/lib64/lua/5.1/* %{buildroot}/usr/lib64/lua/5.1/  
-else  
-    echo "Directory %{_builddir}/.luarocks/lib64/lua/5.1 does not exist"  
-    exit 1  
+
+%install
+cd Mudlet/build
+%make_install INSTALL_ROOT=%{buildroot}
+
+#install lua5.1 rocks packages
+if [ -d %{luarocks_tree}/share/lua/5.1 ]; then
+  mkdir -p %{buildroot}%{_datadir}/lua/5.1
+  cp -r %{luarocks_tree}/share/lua/5.1/* %{buildroot}%{_datadir}/lua/5.1/
 fi  
 
-find %{buildroot}/usr/lib64/lua/5.1 -name "*.so" -exec chrpath --delete {} \; || :
-
-mkdir -p %{buildroot}/%{_datadir}/lua/5.1  
-
-if [ -d %{_builddir}/.luarocks/share/lua/5.1 ]; then
-    cp -r %{_builddir}/.luarocks/share/lua/5.1/* %{buildroot}/%{_datadir}/lua/5.1/
-else
-    echo "No Lua scripts found in %{_builddir}/.luarocks/share/lua/5.1"
+if [ -d %{luarocks_tree}/lib/lua/5.1 ]; then
+  mkdir -p %{buildroot}%{_libdir}/lua/5.1  
+  cp -r %{luarocks_tree}/lib/lua/5.1/* %{buildroot}%{_libdir}/lua/5.1/
 fi
 
-rm -f %{buildroot}/usr/lib64/libqt6keychain.so*  
-rm -f %{buildroot}/usr/lib/debug/usr/lib64/libqt6keychain.so*
+# Install the icon file  
+install -Dm644 ../mudlet.png %{buildroot}%{_datadir}/pixmaps/mudlet.png  
+# Install the desktop entry file  
+install -Dm644 ../mudlet.desktop %{buildroot}%{_datadir}/applications/mudlet.desktop  
 
-find %{buildroot}
 
 %check  
 desktop-file-validate %{buildroot}/%{_datadir}/applications/mudlet.desktop  
 
+
+
 %files  
-%license COPYING  
-%doc README.md  
 %{_bindir}/mudlet  
-%{_datadir}/applications/mudlet.desktop  
-%{_datadir}/icons/hicolor/*/apps/mudlet.png  
-%{_datadir}/icons/hicolor/scalable/apps/mudlet.svg  
-%{_libdir}/lua/5.1/*  
-%{_datadir}/lua/5.1/*  
-%{_datadir}/mudlet/lua/*  
-%{_datadir}/mudlet/tests/*  
-%{_includedir}/QsLog/*  
-%{_includedir}/qt6keychain/*
-%{_libdir}/cmake/Qt6Keychain/*  
-%{_libdir}/qt6/mkspecs/modules/qt_Qt6Keychain.pri  
-%{_datadir}/qt6keychain/translations/*  
-/usr/lib/libQsLog.so
 
-#package debug  
-#Summary: Debug information for mudlet  
-#Group: Development/Debug  
+%dir %{_datadir}/mudlet  
+%{_datadir}/mudlet/*  
 
-#description debug  
-#This package contains debug information for Mudlet.  
-#files debug  
-#*.debug
+%dir %{_datadir}/lua  
+%{_datadir}/lua/*  
+
+%dir %{_datadir}/pixmaps  
+%{_datadir}/pixmaps/*  
+
+%dir %{_datadir}/applications  
+%{_datadir}/applications/*  
 
 
 %changelog  
