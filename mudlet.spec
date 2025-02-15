@@ -151,19 +151,25 @@ desktop-file-validate %{buildroot}/%{_datadir}/applications/mudlet.desktop
 
 
 %files  
-%{_bindir}/mudlet  
+%files  
+%{_bindir}/mudlet
 
-%dir %{_datadir}/mudlet  
+%dir %{_datadir}/mudlet
 %{_datadir}/mudlet/*  
 
-%dir %{_datadir}/lua  
-%{_datadir}/lua/*  
+%dir %{_datadir}/lua
+%{_datadir}/lua/*
+
+%dir %{_libdir}/lua/5.1
+%{_libdir}/lua/5.1/*.so
+%{_libdir}/lua/5.1/luasql/
+%{_libdir}/lua/5.1/luasql/*.so
 
 %dir %{_datadir}/pixmaps  
-%{_datadir}/pixmaps/*  
+%{_datadir}/pixmaps/*
 
 %dir %{_datadir}/applications  
-%{_datadir}/applications/*  
+%{_datadir}/applications/*
 
 
 %changelog  
