@@ -1,61 +1,61 @@
-name: Build and Publish libzip to Copr
+name: Build libzip  
 
-    on:
-      push:
-        paths:
-          - '*.spec' # Uruchamiaj workflow tylko, gdy zmieniony zostanie plik .spec
-      workflow_dispatch:
+on:  
+  push:  
+    paths:  
+      - '*.spec' # Uruchamiaj workflow tylko, gdy zmieniony zostanie plik .spec  
+  workflow_dispatch: # Umożliwia ręczne uruchamianie workflow  
 
-    jobs:
-      build-and-publish:
-        runs-on: ubuntu-latest
+jobs:  
+  build-and-publish:  
+    runs-on: ubuntu-latest  
 
-        steps:
-          # Checkout the repository
-          - name: Checkout code
-            uses: actions/checkout@v3
+    steps:  
+      # Checkout the repository  
+      - name: Checkout code  
+        uses: actions/checkout@v3  
 
-          # Install dependencies
-          - name: Install dependencies
-            run: |
-              sudo apt-get update
-              sudo apt-get install -y copr-cli
+      # Install dependencies  
+      - name: Install dependencies  
+        run: |  
+          sudo apt-get update  
+          sudo apt-get install -y copr-cli  
 
-          # Configure Copr CLI
-          - name: Configure Copr CLI
-            run: |
-              mkdir -p ~/.config
-              echo "${{ secrets.COPR_CONFIG }}" > ~/.config/copr
-              chmod 600 ~/.config/copr
+      # Configure Copr CLI  
+      - name: Configure Copr CLI  
+        run: |  
+          mkdir -p ~/.config  
+          echo "${{ secrets.COPR_CONFIG }}" > ~/.config/copr  
+          chmod 600 ~/.config/copr  
 
-          # Increment the build number in the spec file
-          - name: Increment build number
-            run: |
-              SPEC_FILE="compat-lua-zip.spec"
-              if [ -f "$SPEC_FILE" ]; then
-                # Extract the current Release number
-                RELEASE=$(grep -E '^Release:' "$SPEC_FILE" | awk '{print $2}' | cut -d'%' -f1)
-                NEW_RELEASE=$((RELEASE + 1))
-                # Update the Release number in the spec file
-                sed -i "s/^Release:.*$/Release:        ${NEW_RELEASE}%{?dist}/" "$SPEC_FILE"
-                echo "Updated Release to ${NEW_RELEASE}"
-              else
-                echo "Spec file not found!"
-                exit 1
-              fi
+      # Increment the build number in the spec file  
+      - name: Increment build number  
+        run: |  
+          SPEC_FILE="compat-lua-zip.spec"  
+          if [ -f "$SPEC_FILE" ]; then  
+            # Extract the current Release number  
+            RELEASE=$(grep -E '^Release:' "$SPEC_FILE" | awk '{print $2}' | cut -d'%' -f1)  
+            NEW_RELEASE=$((RELEASE + 1))  
+            # Update the Release number in the spec file  
+            sed -i "s/^Release:.*$/Release:        ${NEW_RELEASE}%{?dist}/" "$SPEC_FILE"  
+            echo "Updated Release to ${NEW_RELEASE}"  
+          else  
+            echo "Spec file not found!"  
+            exit 1  
+          fi  
 
-          # Submit the spec file to Copr
-          - name: Submit to Copr
-            run: |
-              copr-cli build "${{ secrets.COPR_PROJECT }}" compat-lua-zip.spec
+      # Submit the spec file to Copr  
+      - name: Submit to Copr  
+        run: |  
+          copr-cli build "${{ secrets.COPR_PROJECT }}" compat-lua-zip.spec  
 
-          # Commit and push the updated spec file
-          - name: Commit and push updated spec file
-            env:
-              GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-            run: |
-              git config user.name "GitHub Actions"
-              git config user.email "actions@github.com"
-              git add compat-lua-zip.spec
-              git commit -m "Incremented build number in spec file"
-              git push
+      # Commit and push the updated spec file  
+      - name: Commit and push updated spec file  
+        env:  
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  
+        run: |  
+          git config user.name "GitHub Actions"  
+          git config user.email "actions@github.com"  
+          git add compat-lua-zip.spec  
+          git commit -m "Incremented build number in spec file"  
+          git push
