@@ -15,18 +15,18 @@ jobs:
       options: --privileged  
 
     steps:  
-      # Checkout the repository  
-      - name: Checkout code  
-        uses: actions/checkout@v3  
+      # Install required packages  
+      - name: Install required packages  
+        run: |  
+          dnf install -y copr-cli jq curl git rpmdevtools rpm-build  
 
       # Configure git safe directory  
       - name: Configure git safe directory  
         run: git config --global --add safe.directory '*'  
 
-      # Install required packages  
-      - name: Install required packages  
-        run: |  
-          dnf install -y copr-cli jq curl git rpmdevtools rpm-build  
+      # Checkout the repository  
+      - name: Checkout code  
+        uses: actions/checkout@v3  
 
       # Configure Copr CLI  
       - name: Configure Copr CLI  
