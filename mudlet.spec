@@ -1,6 +1,6 @@
 Name:           mudlet  
 Version:        4.19.1
-Release:        11%{?dist}
+Release:        10%{?dist}
 Summary:        Crossplatform mud client  
 
 License:        GPL-2.0-or-later  
@@ -82,6 +82,17 @@ a specially designed scripting framework, and a very fast text display.
 Add to that cross-platform capability, an open-source development model,
 and you'll get a very likable MUD client.
 
+%package debuginfo
+Summary: Debug information for package %{name}
+Group: Development/Debug
+Requires: %{name} = %{version}-%{release}
+
+%description debuginfo
+This package provides debug information for package %{name}.
+Debug information is useful when developing applications that use this 
+package or when debugging this package.
+
+
 %global luarocks_tree %{_builddir}/luarocks  
 
 %prep  
@@ -111,15 +122,21 @@ sed -i '/linux {/,/}/ {
 }' src/mudlet.pro
 
 
-%build
-#lua5.1 rocks packages
-export LUA_PATH="%{luarocks_tree}/share/lua/5.1/?.lua;;"
-export LUA_CPATH="%{luarocks_tree}/lib/lua/5.1/?.so;;"
+%build  
+#lua5.1 rocks packages  
+export LUA_PATH="%{luarocks_tree}/share/lua/5.1/?.lua;;"  
+export LUA_CPATH="%{luarocks_tree}/lib/lua/5.1/?.so;;"  
 
-cd Mudlet/build
-WITH_FONTS=NO WITH_OWN_QTKEYCHAIN=NO WITH_UPDATER=NO WITH_VARIABLE_SPLASH_SCREEN=NO XDG_DATA_DIRS=/usr/share %qmake_qt6 PREFIX=%{_qt6_prefix} INCLUDEPATH+=/usr/include/lua-5.1 LUA_SEARCH_OUT=lua-5.1 ../src/mudlet.pro
-make %{?_smp_mflags}  
+cd Mudlet/build  
+WITH_FONTS=NO WITH_OWN_QTKEYCHAIN=NO WITH_UPDATER=NO WITH_VARIABLE_SPLASH_SCREEN=NO XDG_DATA_DIRS=/usr/share %qmake_qt6 \
+    PREFIX=%{_qt6_prefix} \
+    INCLUDEPATH+=/usr/include/lua-5.1 \
+    LUA_SEARCH_OUT=lua-5.1 \
+    CONFIG+=debug_and_release \
+    CONFIG+=force_debug_info \
+    ../src/mudlet.pro  
 
+make %{?_smp_mflags}
 
 %install
 cd Mudlet/build
@@ -150,34 +167,31 @@ install -Dm644 ../mudlet.desktop %{buildroot}%{_datadir}/applications/mudlet.des
 %check  
 desktop-file-validate %{buildroot}/%{_datadir}/applications/mudlet.desktop  
 
-
-
-%files  
 %files  
 %{_bindir}/mudlet
-
 %dir %{_datadir}/mudlet
 %{_datadir}/mudlet/*  
-
 %dir %{_datadir}/lua
 %{_datadir}/lua/*
-
 %dir %{_libdir}/lua/5.1
 %{_libdir}/lua/5.1/*.so
 %{_libdir}/lua/5.1/luasql/
 %{_libdir}/lua/5.1/luasql/*.so
-
 %dir %{_datadir}/pixmaps  
 %{_datadir}/pixmaps/*
-
 %dir %{_datadir}/applications  
 %{_datadir}/applications/*
 
+%files debuginfo  
+%{_prefix}/lib/debug/%{_bindir}/mudlet-%{version}-%{release}.debug  
+%{_prefix}/lib/debug/%{_libdir}/lua/5.1/*.debug  
+%{_prefix}/lib/debug/%{_libdir}/lua/5.1/luasql/*.debug  
 
 %changelog  
-* Sat Feb 15 2025 Package Maintainer <your@email.com> - 4.19.1-11
-- Update to version 4.19.0  
+* Mon Feb 24 2025 Marcin Szydelski <marcin@szydelscy.pl> - 4.19.1-10
+- Update to version 4.19.1 
 - Switched to Qt6  
 - Improved Lua module handling  
 - Fixed OpenGL configuration
+- Add debug info
 
