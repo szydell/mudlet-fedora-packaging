@@ -47,7 +47,7 @@ name: Build and Publish libzip to Copr
           # Submit the spec file to Copr
           - name: Submit to Copr
             run: |
-              copr-cli buildspec --nowait --name "${{ secrets.COPR_PROJECT }}" compat-lua-zip.spec
+              copr-cli build "${{ secrets.COPR_PROJECT }}" compat-lua-zip.spec
 
           # Commit and push the updated spec file
           - name: Commit and push updated spec file
