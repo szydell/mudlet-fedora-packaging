@@ -71,6 +71,8 @@ Requires:       mesa-libGL
 Requires:       mesa-libGLU
 Requires:       lua5.1-filesystem 
 Requires:       bitstream-vera-fonts-all
+Requires:	hunspel-pl
+
 
 %description  
 Mudlet is a quality MUD client, designed to take mudding to a new level.
