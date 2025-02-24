@@ -3,23 +3,30 @@ name: Build libzip
 on:  
   push:  
     paths:  
-      - '*.spec' # Uruchamiaj workflow tylko, gdy zmieniony zostanie plik .spec  
+      - 'compat-lua-zip.spec' # Uruchamiaj workflow tylko, gdy zmieniony zostanie ten konkretny plik  
   workflow_dispatch: # Umożliwia ręczne uruchamianie workflow  
 
 jobs:  
   build-and-publish:  
     runs-on: ubuntu-latest  
 
+    container:  
+      image: fedora:latest  
+      options: --privileged  
+
     steps:  
       # Checkout the repository  
       - name: Checkout code  
         uses: actions/checkout@v3  
 
-      # Install dependencies  
-      - name: Install dependencies  
+      # Configure git safe directory  
+      - name: Configure git safe directory  
+        run: git config --global --add safe.directory '*'  
+
+      # Install required packages  
+      - name: Install required packages  
         run: |  
-          sudo apt-get update  
-          sudo apt-get install -y copr-cli  
+          dnf install -y copr-cli jq curl git rpmdevtools rpm-build  
 
       # Configure Copr CLI  
       - name: Configure Copr CLI  
@@ -59,3 +66,4 @@ jobs:
           git add compat-lua-zip.spec  
           git commit -m "Incremented build number in spec file"  
           git push
+
