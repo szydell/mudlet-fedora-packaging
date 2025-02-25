@@ -41,7 +41,8 @@ jobs:
           if [ "$CURRENT_VERSION" = "$LATEST_VERSION" ]; then  
             echo "update_needed=false" >> $GITHUB_ENV  
           else  
-            echo "update_needed=true" >> $GITHUB_ENV  
+            echo "update_needed=true" >> $GITHUB_ENV
+          fi  
 
       # Update the spec file if a new version is available  
       - name: Update spec file  
