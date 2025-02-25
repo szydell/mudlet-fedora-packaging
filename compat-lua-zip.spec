@@ -1,6 +1,6 @@
 Name:           compat-lua-zip  
 Version:        1.2.7  
-Release:        1%{?dist}  
+Release:        2%{?dist}
 Summary:        A ZIP support module for Lua 5.1  
 
 License:        MIT  
