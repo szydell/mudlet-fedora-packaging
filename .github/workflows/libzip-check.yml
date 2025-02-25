@@ -27,10 +27,8 @@ jobs:
           API_URL="https://api.github.com/repos/mpeterv/luazip/releases/latest"  
           LATEST_RELEASE=$(curl -s $API_URL | jq -r '.tag_name')  
           RELEASE_BODY=$(curl -s $API_URL | jq -r '.body')  
-          echo "Latest release: $LATEST_RELEASE"  
-          echo "Release body: $RELEASE_BODY"  
-          echo "::set-output name=latest_version::$LATEST_RELEASE"  
-          echo "::set-output name=release_body::$RELEASE_BODY"  
+          echo "LATEST_VERSION=$LATEST_RELEASE" >> $GITHUB_ENV  
+          echo "RELEASE_BODY=$RELEASE_BODY" >> $GITHUB_ENV  
 
       # Check if the spec file needs to be updated  
       - name: Check if update is needed  
@@ -38,24 +36,18 @@ jobs:
         run: |  
           SPEC_FILE="compat-lua-zip.spec"  
           CURRENT_VERSION=$(grep -E '^Version:' "$SPEC_FILE" | awk '{print $2}')  
-          LATEST_VERSION="${{ steps.get_release.outputs.latest_version }}"  
           echo "Current version: $CURRENT_VERSION"  
           echo "Latest version: $LATEST_VERSION"  
           if [ "$CURRENT_VERSION" = "$LATEST_VERSION" ]; then  
-            echo "No update needed."  
-            echo "::set-output name=update_needed::false"  
+            echo "update_needed=false" >> $GITHUB_ENV  
           else  
-            echo "Update needed."  
-            echo "::set-output name=update_needed::true"  
-          fi  
+            echo "update_needed=true" >> $GITHUB_ENV  
 
       # Update the spec file if a new version is available  
       - name: Update spec file  
-        if: steps.check_update.outputs.update_needed == 'true'  
+        if: env.update_needed == 'true'  
         run: |  
           SPEC_FILE="compat-lua-zip.spec"  
-          LATEST_VERSION="${{ steps.get_release.outputs.latest_version }}"  
-          RELEASE_BODY="${{ steps.get_release.outputs.release_body }}"  
           # Update Version  
           sed -i "s/^Version:.*/Version:        $LATEST_VERSION/" "$SPEC_FILE"  
           # Reset Release to 1  
@@ -68,12 +60,13 @@ jobs:
 
       # Commit and push changes  
       - name: Commit and push changes  
-        if: steps.check_update.outputs.update_needed == 'true'  
+        if: env.update_needed == 'true'  
         env:  
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  
         run: |  
           git config user.name "GitHub Actions"  
           git config user.email "actions@github.com"  
           git add compat-lua-zip.spec  
-          git commit -m "Update to version ${{ steps.get_release.outputs.latest_version }}"  
+          git commit -m "Update to version $LATEST_VERSION"  
           git push
+
