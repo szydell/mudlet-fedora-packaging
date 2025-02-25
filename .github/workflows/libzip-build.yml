@@ -66,6 +66,8 @@ jobs:
           git config user.name "GitHub Actions"  
           git config user.email "actions@github.com"  
           git add compat-lua-zip.spec  
-          git commit -m "Incremented build number in spec file"  
+          git commit -m "Incremented build number in spec file"
+          git remote set-url origin "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" 
           git push
+
 
