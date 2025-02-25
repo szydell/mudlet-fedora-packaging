@@ -3,8 +3,8 @@ name: Build libzip
 on:  
   push:  
     paths:  
-      - 'compat-lua-zip.spec' # Trigger workflow only when this specific file is changed  
-  workflow_dispatch: # Allow manual triggering of the workflow  
+      - 'compat-lua-zip.spec'  
+  workflow_dispatch:  
 
 jobs:  
   build-and-publish:  
@@ -15,17 +15,18 @@ jobs:
       options: --privileged  
 
     steps:  
+      # Install required packages  
+      - name: Install required packages  
+        run: |  
+          dnf install -y git-core copr-cli jq curl rpmdevtools rpm-build  
+          git --version  
+
       # Checkout the repository  
       - name: Checkout code  
         uses: actions/checkout@v4  
         with:  
           token: ${{ secrets.GITHUB_TOKEN }}  
-          fetch-depth: 0 # Fetch the full repository history to enable git operations  
-
-      # Install required packages  
-      - name: Install required packages  
-        run: |  
-          dnf install -y copr-cli jq curl git rpmdevtools rpm-build  
+          fetch-depth: 0  
 
       # Configure git safe directory  
       - name: Configure git safe directory  
@@ -43,10 +44,8 @@ jobs:
         run: |  
           SPEC_FILE="compat-lua-zip.spec"  
           if [ -f "$SPEC_FILE" ]; then  
-            # Extract the current Release number  
             RELEASE=$(grep -E '^Release:' "$SPEC_FILE" | awk '{print $2}' | cut -d'%' -f1)  
             NEW_RELEASE=$((RELEASE + 1))  
-            # Update the Release number in the spec file  
             sed -i "s/^Release:.*$/Release:        ${NEW_RELEASE}%{?dist}/" "$SPEC_FILE"  
             echo "Updated Release to ${NEW_RELEASE}"  
           else  
@@ -64,7 +63,6 @@ jobs:
         env:  
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  
         run: |  
-          cd $GITHUB_WORKSPACE  
           git config user.name "GitHub Actions"  
           git config user.email "actions@github.com"  
           git add compat-lua-zip.spec  
